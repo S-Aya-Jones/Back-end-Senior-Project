@@ -26,7 +26,6 @@ thermStat['Hot'] = fuzz.trimf(thermStat.universe, [65, 65, 70])
 thermStat['Warm'] = fuzz.trimf(thermStat.universe, [65, 68, 72])
 thermStat['Cool'] = fuzz.trimf(thermStat.universe, [68, 70, 75])
 thermStat['Cold'] = fuzz.trimf(thermStat.universe, [70, 75, 75])
-
 hotNorm.view()
 warmNorm.view()
 coolNorm.view()
