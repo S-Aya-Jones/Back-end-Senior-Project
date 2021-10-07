@@ -1,11 +1,11 @@
 # Imports
 from Artificial_Intelligence.FuzzyController import FuzzyController
+from Artificial_Intelligence.Ann_Model import Ann_Model
 import torch
 import torch.nn as nn
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
-
 
 # Set Device #
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -22,7 +22,7 @@ df['Thermostat'] = (avgTemp['Thermostat'])
 df['TempNorm'] = (avgTemp['TempNorm'])
 df['Min Temp'] = (minTemp['Value'])
 
-# convert from pandas dataframe to tensor
+# Convert from pandas dataframe to tensor
 data = torch.tensor(df[df.columns[1:3]].values).float()
 labels = torch.tensor(df[df.columns[3:4]].values).long()
 
@@ -33,48 +33,36 @@ Norms[df.TempNorm == 'Hot'] = 3
 
 Norms_Hot = F.one_hot(Norms)
 
-# Model architecture
-Ann_Model = nn.Sequential(
-    nn.Linear(2, 64),  # Input layer
-    nn.ReLU(),  # Activation
-    nn.Linear(64, 64),  # Hidden layer
-    nn.ReLU(),  # Activation
-    nn.Linear(64, 64),  # Hidden layer
-    nn.ReLU(),  # Activation
-    nn.Linear(64, 64),  # Hidden layer
-    nn.ReLU(),  # Activation
-    nn.Linear(64, 4),  # Output layer
-)
-
 # Loss function
 loss_fun = nn.CrossEntropyLoss()
 
+# Instantiate Model
+model = Ann_Model()
+
 # Optimizer
-optimizer = torch.optim.SGD(Ann_Model.parameters(), lr=.001)
+optimizer = torch.optim.SGD(model.parameters(), lr=.002)
 
-# epochs
-num_epochs = 1000
+# Epochs
+num_epochs = 100
 
-# initialize losses
+# Initialize losses
 losses = torch.zeros(num_epochs)
 accuracy = []
 predicted_temps = []
 
 # Training loop
 for epoch in range(num_epochs):
+    print(epoch)
     # Forward pass
-    y_hat = Ann_Model(data)
-
-    sm = nn.Softmax(dim=1)
-    probabilities = sm(y_hat)
+    y_hat = model(data)
 
     # Call Fuzzy Controller
-    a = FuzzyController(probabilities)
+    a = FuzzyController(y_hat)
     predicted_temps.append(a.inference())
 
     # Compute loss (instead of y_hat it should be outputs from fuzzy controller)
     # a = torch.FloatTensor(predicted_temps)
-    loss = loss_fun(probabilities, Norms)
+    loss = loss_fun(y_hat, Norms)
     losses[epoch] = loss
 
     # Backpropagation
@@ -83,16 +71,16 @@ for epoch in range(num_epochs):
     optimizer.step()
 
     # Compute accuracy
-    matches = torch.argmax(probabilities, axis=1) == Norms  # Booleans (false/true)
+    matches = torch.argmax(y_hat, axis=1) == Norms  # Booleans (false/true)
     matches_numeric = matches.float()  # Convert to numbers (0/1)
     acc = 100 * torch.mean(matches_numeric)  # Average and x100
     accuracy.append(acc)  # Add to list of accuracies
 
 # Final forward pass
-predictions = Ann_Model(data)
-print(predictions)
+predictions = model(data)
+
 pred_labels = torch.argmax(predictions, axis=1)
-print(pred_labels)
+
 total_acc = 100 * torch.mean((pred_labels == Norms).float())
 
 # Report accuracy
